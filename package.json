@@ -1,0 +1,52 @@
+{
+  "name": "ml-regression-polynomial-2d-2d",
+  "version": "0.0.0",
+  "description": "Polynomial Regression 2D",
+  "types": "./lib/index.d.ts",
+  "main": "./lib/index.js",
+  "module": "./lib-esm/index.js",
+  "files": [
+    "src",
+    "lib",
+    "lib-esm"
+  ],
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "clean": "rimraf lib lib-esm",
+    "eslint": "eslint src",
+    "eslint-fix": "npm run eslint -- --fix",
+    "prepack": "npm run tsc",
+    "prettier": "prettier --check src",
+    "prettier-write": "prettier --write src",
+    "test": "npm run test-only && npm run eslint && npm run prettier && npm run check-types",
+    "test-only": "vitest run --coverage",
+    "tsc": "npm run clean && npm run tsc-cjs && npm run tsc-esm",
+    "tsc-cjs": "tsc --project tsconfig.cjs.json",
+    "tsc-esm": "tsc --project tsconfig.esm.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mljs/regression-polynomial-2d.git"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mljs/regression-polynomial-2d/issues"
+  },
+  "homepage": "https://github.com/mljs/regression-polynomial-2d#readme",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.2.2",
+    "eslint": "^8.56.0",
+    "eslint-config-cheminfo-typescript": "^12.1.0",
+    "ml-spectra-processing": "^12.10.1",
+    "prettier": "^3.2.4",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2"
+  },
+  "dependencies": {
+    "cheminfo-types": "^1.7.2",
+    "ml-matrix": "^6.11.0",
+    "ml-regression-base": "^3.0.0"
+  }
+}
