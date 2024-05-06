@@ -1,3 +1,4 @@
+import { NumberArray } from 'cheminfo-types';
 import { describe, it, expect } from 'vitest';
 
 import { PolynomialRegression2D } from '../PolynomialRegression2D';
@@ -27,7 +28,7 @@ describe('2D polinomial fit', () => {
   });
 
   it('Prediction', () => {
-    const test = new Array(11);
+    const test: NumberArray[] = new Array(11);
     let val = 0.5;
     for (let i = 0; i < 11; ++i) {
       test[i] = [val, val + 10];
@@ -65,7 +66,7 @@ describe('2D polinomial fit', () => {
     const test = 10;
     let x1 = -4.75;
     let x2 = 4.75;
-    const X1 = new Array(test);
+    const X1: NumberArray[] = new Array(test);
     for (let i = 0; i < test; ++i) {
       X1[i] = [x1, x2];
       x1++;
