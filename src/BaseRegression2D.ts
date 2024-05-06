@@ -101,4 +101,4 @@ export default class BaseRegression2D {
 function isOnePoint(x: NumberArray | NumberArray[]): x is NumberArray {
   return !isAnyArray(x[0]);
 }
-export { checkArrayLength, type NumberArray };
+export { checkArrayLength };
