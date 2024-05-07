@@ -1,7 +1,8 @@
 import { type NumberArray } from 'cheminfo-types';
 import { Matrix, SVD } from 'ml-matrix';
+import { maybeToPrecision } from 'ml-regression-base';
 
-import BaseRegression2D from './BaseRegression2D';
+import BaseRegression2D, { checkArrayLength } from './BaseRegression2D';
 
 export interface PolynomialRegression2DOptions {
   /**
@@ -25,7 +26,7 @@ export class PolynomialRegression2D extends BaseRegression2D {
    */
   constructor(
     inputs: NumberArray[],
-    outputs: NumberArray[],
+    outputs: NumberArray,
     options: PolynomialRegression2DOptions = {},
   ) {
     super();
@@ -35,19 +36,8 @@ export class PolynomialRegression2D extends BaseRegression2D {
       this.coefficients = Matrix.columnVector(outputs.coefficients);
       // @ts-expect-error internal use only
       this.order = outputs.order;
-      // @ts-expect-error internal use only
-      if (outputs.r) {
-        // @ts-expect-error internal use only
-        this.r = outputs.r;
-        // @ts-expect-error internal use only
-        this.r2 = outputs.r2;
-      }
-      // @ts-expect-error internal use only
-      if (outputs.chi2) {
-        // @ts-expect-error internal use only
-        this.chi2 = outputs.chi2;
-      }
     } else {
+      checkArrayLength(inputs, outputs);
       const { order = 2 } = options;
       this.order = order;
       this.coefficients = train(inputs, outputs, order);
@@ -71,6 +61,57 @@ export class PolynomialRegression2D extends BaseRegression2D {
     return y;
   }
 
+  toString(precision: number) {
+    return this._toFormula(precision, false);
+  }
+
+  toLaTeX(precision: number) {
+    return this._toFormula(precision, true);
+  }
+
+  _toFormula(precision: number, isLaTeX: boolean) {
+    let sup = '^';
+    let closeSup = '';
+    let times = ' * ';
+    if (isLaTeX) {
+      sup = '^{';
+      closeSup = '}';
+      times = '';
+    }
+
+    let fn = '';
+    let str = '';
+    let column = 0;
+    for (let i = 0; i <= this.order; i++) {
+      for (let j = 0; j <= this.order - i; j++) {
+        str = '';
+        const coefficient = this.coefficients.get(column, 0);
+        if (coefficient !== 0) {
+          str += maybeToPrecision(coefficient, precision);
+          if (i === 1) {
+            str += `${times}x`;
+          } else if (i > 1) {
+            str += `${times}x${sup}${i}${closeSup}`;
+          }
+          if (j === 1) {
+            str += `${times}y`;
+          } else if (j > 1) {
+            str += `${times}y${sup}${j}${closeSup}`;
+          }
+          if (coefficient > 0) {
+            str = ` + ${str}`;
+          } else {
+            str = ` ${str}`;
+          }
+        }
+        column++;
+        fn = str + fn;
+      }
+    }
+
+    return `f(x, y) = ${fn.startsWith('+') ? fn.slice(1) : fn}`;
+  }
+
   toJSON() {
     return {
       name: 'polyfit2D',
@@ -79,7 +120,7 @@ export class PolynomialRegression2D extends BaseRegression2D {
     };
   }
 
-  static load(json: Record<string, any>) {
+  static load(json: ReturnType<PolynomialRegression2D['toJSON']>) {
     if (json.name !== 'polyfit2D') {
       throw new TypeError('not a polyfit2D model');
     }
@@ -113,11 +154,10 @@ function powColVector(x: Matrix, power: number) {
  */
 function train(
   x: NumberArray[] | Matrix,
-  y: NumberArray[] | Matrix,
+  y: NumberArray | Matrix,
   order: number,
 ) {
   if (!Matrix.isMatrix(x)) x = new Matrix(x);
-  //@ts-expect-error it is a internal error in matrix;
   if (!Matrix.isMatrix(y)) y = Matrix.columnVector(y);
 
   if (y.rows !== x.rows) {

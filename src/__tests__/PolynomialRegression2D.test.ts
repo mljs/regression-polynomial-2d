@@ -34,7 +34,6 @@ describe('2D polinomial fit', () => {
       test[i] = [val, val + 10];
       val++;
     }
-
     const y = pf.predict(test);
 
     let j = 0;
