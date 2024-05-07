@@ -1,4 +1,4 @@
-import { type NumberArray } from 'cheminfo-types';
+import { DataXY, PointXY, type NumberArray } from 'cheminfo-types';
 import { isAnyArray } from 'is-any-array';
 
 import checkArrayLength from './checkArrayLength';
@@ -16,24 +16,25 @@ export default class BaseRegression2D {
     }
   }
 
-  predict(x: NumberArray): number;
-  predict(x: NumberArray[]): number[];
-  predict(x: NumberArray | NumberArray[]) {
-    if (isOnePoint(x)) {
-      return this._predict(x);
-    } else if (isAnyArray(x[0])) {
-      const y = [];
-      for (const xVal of x) {
-        y.push(this._predict(xVal));
+  predict(inputs: PointXY): number;
+  predict(inputs: DataXY): NumberArray;
+  predict(inputs: PointXY | DataXY): number | NumberArray {
+    if (isOnePoint(inputs)) {
+      return this._predict(inputs);
+    } else if (isAnyArray(inputs.x)) {
+      const { x, y } = inputs;
+      const result = new Float64Array(x.length);
+      for (let i = 0; i < x.length; i++) {
+        result[i] = this._predict({ x: x[i], y: y[i] });
       }
-      return y;
+      return result;
     } else {
       throw new TypeError('x must be a number or array');
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _predict(x: NumberArray): number {
+  _predict(x: PointXY): number {
     throw new Error('_predict must be implemented');
   }
 
@@ -57,14 +58,9 @@ export default class BaseRegression2D {
    * @param y - response variable
    * @return - Object with further statistics.
    */
-  score(x: NumberArray[], y: NumberArray): RegressionScore {
-    checkArrayLength(x, y);
-
-    const n = x.length;
-    const y2 = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      y2[i] = this._predict(x[i]);
-    }
+  getScore(input: DataXY, z: NumberArray): RegressionScore {
+    checkArrayLength(input, z);
+    const y2 = this.predict(input);
 
     let xSum = 0;
     let ySum = 0;
@@ -73,16 +69,17 @@ export default class BaseRegression2D {
     let xSquared = 0;
     let ySquared = 0;
     let xY = 0;
+    const n = z.length;
     for (let i = 0; i < n; i++) {
       xSum += y2[i];
-      ySum += y[i];
+      ySum += z[i];
       xSquared += y2[i] * y2[i];
-      ySquared += y[i] * y[i];
-      xY += y2[i] * y[i];
-      if (y[i] !== 0) {
-        chi2 += ((y[i] - y2[i]) * (y[i] - y2[i])) / y[i];
+      ySquared += z[i] * z[i];
+      xY += y2[i] * z[i];
+      if (z[i] !== 0) {
+        chi2 += ((z[i] - y2[i]) * (z[i] - y2[i])) / z[i];
       }
-      rmsd += (y[i] - y2[i]) * (y[i] - y2[i]);
+      rmsd += (z[i] - y2[i]) * (z[i] - y2[i]);
     }
 
     const r =
@@ -98,7 +95,7 @@ export default class BaseRegression2D {
   }
 }
 
-function isOnePoint(x: NumberArray | NumberArray[]): x is NumberArray {
-  return !isAnyArray(x[0]);
+function isOnePoint(input: PointXY | DataXY): input is PointXY {
+  return !isAnyArray(input.x);
 }
 export { checkArrayLength };

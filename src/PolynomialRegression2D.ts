@@ -1,4 +1,4 @@
-import { type NumberArray } from 'cheminfo-types';
+import { DataXY, PointXY, type NumberArray } from 'cheminfo-types';
 import { Matrix, SVD } from 'ml-matrix';
 import { maybeToPrecision } from 'ml-regression-base';
 
@@ -12,11 +12,18 @@ export interface PolynomialRegression2DOptions {
   order?: number;
 }
 
+interface Score {
+  r: number;
+  r2: number;
+  chi2: number;
+  rmsd: number;
+}
 // Implements the Kernel ridge regression algorithm.
 // http://www.ics.uci.edu/~welling/classnotes/papers_class/Kernel-Ridge.pdf
 export class PolynomialRegression2D extends BaseRegression2D {
   order: number;
   coefficients: Matrix;
+  score: Score;
   /**
    * Constructor for the 2D polynomial fitting
    *
@@ -25,7 +32,7 @@ export class PolynomialRegression2D extends BaseRegression2D {
    * @constructor
    */
   constructor(
-    inputs: NumberArray[],
+    inputs: DataXY,
     outputs: NumberArray,
     options: PolynomialRegression2DOptions = {},
   ) {
@@ -36,29 +43,30 @@ export class PolynomialRegression2D extends BaseRegression2D {
       this.coefficients = Matrix.columnVector(outputs.coefficients);
       // @ts-expect-error internal use only
       this.order = outputs.order;
+      // @ts-expect-error internal use only
+      this.score = outputs.score;
     } else {
       checkArrayLength(inputs, outputs);
       const { order = 2 } = options;
       this.order = order;
       this.coefficients = train(inputs, outputs, order);
+      this.score = this.getScore(inputs, outputs);
     }
   }
 
-  _predict(newInputs: NumberArray) {
-    const x1 = newInputs[0];
-    const x2 = newInputs[1];
+  _predict(newInputs: PointXY) {
+    const { x, y } = newInputs;
 
-    let y = 0;
+    let z = 0;
     let column = 0;
-
     for (let i = 0; i <= this.order; i++) {
       for (let j = 0; j <= this.order - i; j++) {
-        y += x1 ** i * x2 ** j * this.coefficients.get(column, 0);
+        z += x ** i * y ** j * this.coefficients.get(column, 0);
         column++;
       }
     }
 
-    return y;
+    return z;
   }
 
   toString(precision: number) {
@@ -116,6 +124,7 @@ export class PolynomialRegression2D extends BaseRegression2D {
     return {
       name: 'polyfit2D',
       order: this.order,
+      score: this.score,
       coefficients: this.coefficients,
     };
   }
@@ -152,13 +161,12 @@ function powColVector(x: Matrix, power: number) {
  * @param x - A matrix with n rows and 2 columns.
  * @param y - A vector of the prediction values.
  */
-function train(
-  x: NumberArray[] | Matrix,
-  y: NumberArray | Matrix,
-  order: number,
-) {
-  if (!Matrix.isMatrix(x)) x = new Matrix(x);
+function train(input: DataXY, y: NumberArray | Matrix, order: number) {
   if (!Matrix.isMatrix(y)) y = Matrix.columnVector(y);
+
+  const x = new Matrix(y.rows, 2);
+  x.setColumn(0, input.x);
+  x.setColumn(1, input.y);
 
   if (y.rows !== x.rows) {
     y = y.transpose();
