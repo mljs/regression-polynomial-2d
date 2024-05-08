@@ -2,15 +2,12 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "declaration": true,
-    "target": "es2020",
+    "outDir": "lib",
+    "target": "es2022",
     "skipLibCheck": true,
-    "useUnknownInCatchVariables": false,
+    "sourceMap": true,
+    "strict": true
   },
-  "include": [
-    "./src/**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["./src/**/*"],
+  "exclude": ["node_modules"]
 }
