@@ -1,165 +1,139 @@
+import { DataXY, PointXY, type NumberArray } from 'cheminfo-types';
 import { Matrix, SVD } from 'ml-matrix';
-import BaseRegression from 'ml-regression-base';
+import { maybeToPrecision } from 'ml-regression-base';
 
-const defaultOptions = {
-  order: 2,
-};
+import BaseRegression2D, { checkArrayLength } from './BaseRegression2D';
+
+export interface PolynomialRegression2DOptions {
+  /**
+   *degree of the polynomial regression.
+   * @default 2
+   */
+  order?: number;
+}
+
+interface Score {
+  r: number;
+  r2: number;
+  chi2: number;
+  rmsd: number;
+}
 // Implements the Kernel ridge regression algorithm.
 // http://www.ics.uci.edu/~welling/classnotes/papers_class/Kernel-Ridge.pdf
-export class PolynomialRegression2D extends BaseRegression {
+export class PolynomialRegression2D extends BaseRegression2D {
+  order: number;
+  coefficients: Matrix;
+  score: Score;
   /**
    * Constructor for the 2D polynomial fitting
    *
-   * @param inputs
-   * @param outputs
-   * @param options
+   * @param inputs - independent or explanatory variable
+   * @param outputs - dependent or response variable`
    * @constructor
    */
-  constructor(inputs, outputs, options = {}) {
+  constructor(
+    inputs: DataXY,
+    outputs: NumberArray,
+    options: PolynomialRegression2DOptions = {},
+  ) {
     super();
+    // @ts-expect-error internal use only
     if (inputs === true) {
-      // reloading model
+      // @ts-expect-error internal use only
       this.coefficients = Matrix.columnVector(outputs.coefficients);
+      // @ts-expect-error internal use only
       this.order = outputs.order;
-      if (outputs.r) {
-        this.r = outputs.r;
-        this.r2 = outputs.r2;
-      }
-      if (outputs.chi2) {
-        this.chi2 = outputs.chi2;
-      }
+      // @ts-expect-error internal use only
+      this.score = outputs.score;
     } else {
-      options = { ...defaultOptions, ...options };
-      this.order = options.order;
-      this.coefficients = [];
-      this.X = inputs;
-      this.y = outputs;
-
-      this.train(this.X, this.y, options);
+      checkArrayLength(inputs, outputs);
+      const { order = 2 } = options;
+      this.order = order;
+      this.coefficients = train(inputs, outputs, order);
+      this.score = this.getScore(inputs, outputs);
     }
   }
 
-  /**
-   * Function that fits the model given the data(X) and predictions(y).
-   * The third argument is an object with the following options:
-   * * order: order of the polynomial to fit.
-   *
-   * @param {Matrix} X - A matrix with n rows and 2 columns.
-   * @param {Matrix} y - A vector of the prediction values.
-   */
-  train(X, y) {
-    if (!Matrix.isMatrix(X)) X = new Matrix(X);
-    if (!Matrix.isMatrix(y)) y = Matrix.columnVector(y);
+  _predict(newInputs: PointXY) {
+    const { x, y } = newInputs;
 
-    if (y.rows !== X.rows) {
-      y = y.transpose();
-    }
-
-    if (X.columns !== 2) {
-      throw new RangeError(
-        `You give X with ${X.columns} columns and it must be 2`,
-      );
-    }
-    if (X.rows !== y.rows) {
-      throw new RangeError('X and y must have the same rows');
-    }
-
-    const examples = X.rows;
-    const coefficients = ((this.order + 2) * (this.order + 1)) / 2;
-    this.coefficients = new Array(coefficients);
-
-    const x1 = X.getColumnVector(0);
-    const x2 = X.getColumnVector(1);
-
-    const scaleX1 = 1.0 / x1.clone().abs().max();
-    const scaleX2 = 1.0 / x2.clone().abs().max();
-    const scaleY = 1.0 / y.clone().abs().max();
-
-    x1.mulColumn(0, scaleX1);
-    x2.mulColumn(0, scaleX2);
-    y.mulColumn(0, scaleY);
-
-    const A = new Matrix(examples, coefficients);
-    let col = 0;
-
-    for (let i = 0; i <= this.order; ++i) {
-      const limit = this.order - i;
-      for (let j = 0; j <= limit; ++j) {
-        const result = powColVector(x1, i).mulColumnVector(powColVector(x2, j));
-        A.setColumn(col, result);
-        col++;
-      }
-    }
-
-    const svd = new SVD(A.transpose(), {
-      computeLeftSingularVectors: true,
-      computeRightSingularVectors: true,
-      autoTranspose: false,
-    });
-
-    let qqs = Matrix.rowVector(svd.diagonal);
-    qqs = qqs.apply((i, j) => {
-      if (qqs.get(i, j) >= 1e-15) qqs.set(i, j, 1 / qqs.get(i, j));
-      else qqs.set(i, j, 0);
-    });
-
-    const qqs1 = Matrix.zeros(examples, coefficients);
-    for (let i = 0; i < coefficients; ++i) {
-      qqs1.set(i, i, qqs.get(0, i));
-    }
-
-    qqs = qqs1;
-
-    const U = svd.rightSingularVectors;
-    const V = svd.leftSingularVectors;
-
-    this.coefficients = V.mmul(qqs.transpose()).mmul(U.transpose()).mmul(y);
-
-    col = 0;
-
-    for (let i = 0; i <= coefficients; ++i) {
-      const limit = this.order - i;
-      for (let j = 0; j <= limit; ++j) {
-        this.coefficients.set(
-          col,
-          0,
-          (this.coefficients.get(col, 0) * scaleX1 ** i * scaleX2 ** j) /
-            scaleY,
-        );
-        col++;
-      }
-    }
-  }
-
-  _predict(newInputs) {
-    const x1 = newInputs[0];
-    const x2 = newInputs[1];
-
-    let y = 0;
+    let z = 0;
     let column = 0;
-
     for (let i = 0; i <= this.order; i++) {
       for (let j = 0; j <= this.order - i; j++) {
-        y += x1 ** i * x2 ** j * this.coefficients.get(column, 0);
+        z += x ** i * y ** j * this.coefficients.get(column, 0);
         column++;
       }
     }
 
-    return y;
+    return z;
+  }
+
+  toString(precision: number) {
+    return this._toFormula(precision, false);
+  }
+
+  toLaTeX(precision: number) {
+    return this._toFormula(precision, true);
+  }
+
+  _toFormula(precision: number, isLaTeX: boolean) {
+    let sup = '^';
+    let closeSup = '';
+    let times = ' * ';
+    if (isLaTeX) {
+      sup = '^{';
+      closeSup = '}';
+      times = '';
+    }
+
+    let fn = '';
+    let str = '';
+    let column = 0;
+    for (let i = 0; i <= this.order; i++) {
+      for (let j = 0; j <= this.order - i; j++) {
+        str = '';
+        const coefficient = this.coefficients.get(column, 0);
+        if (coefficient !== 0) {
+          str += maybeToPrecision(coefficient, precision);
+          if (i === 1) {
+            str += `${times}x`;
+          } else if (i > 1) {
+            str += `${times}x${sup}${i}${closeSup}`;
+          }
+          if (j === 1) {
+            str += `${times}y`;
+          } else if (j > 1) {
+            str += `${times}y${sup}${j}${closeSup}`;
+          }
+          if (coefficient > 0) {
+            str = ` + ${str}`;
+          } else {
+            str = ` ${str}`;
+          }
+        }
+        column++;
+        fn = str + fn;
+      }
+    }
+
+    return `f(x, y) = ${fn.startsWith('+') ? fn.slice(1) : fn}`;
   }
 
   toJSON() {
     return {
       name: 'polyfit2D',
       order: this.order,
+      score: this.score,
       coefficients: this.coefficients,
     };
   }
 
-  static load(json) {
+  static load(json: ReturnType<PolynomialRegression2D['toJSON']>) {
     if (json.name !== 'polyfit2D') {
       throw new TypeError('not a polyfit2D model');
     }
+    //@ts-expect-error internal use only
     return new PolynomialRegression2D(true, json);
   }
 }
@@ -169,12 +143,104 @@ export class PolynomialRegression2D extends BaseRegression {
  *
  * @param x - Column vector.
  * @param power - Pow number.
- * @return {Suite|Matrix}
+ * @return {Matrix}
  */
-function powColVector(x, power) {
+function powColVector(x: Matrix, power: number) {
   const result = x.clone();
   for (let i = 0; i < x.rows; ++i) {
     result.set(i, 0, result.get(i, 0) ** power);
   }
   return result;
+}
+
+/**
+ * Function that fits the model given the data(x) and predictions(y).
+ * The third argument is an object with the following options:
+ * * order: order of the polynomial to fit.
+ *
+ * @param x - A matrix with n rows and 2 columns.
+ * @param y - A vector of the prediction values.
+ */
+function train(input: DataXY, y: NumberArray | Matrix, order: number) {
+  if (!Matrix.isMatrix(y)) y = Matrix.columnVector(y);
+
+  const x = new Matrix(y.rows, 2);
+  x.setColumn(0, input.x);
+  x.setColumn(1, input.y);
+
+  if (y.rows !== x.rows) {
+    y = y.transpose();
+  }
+
+  if (x.columns !== 2) {
+    throw new RangeError(
+      `You give x with ${x.columns} columns and it must be 2`,
+    );
+  }
+  if (x.rows !== y.rows) {
+    throw new RangeError('x and y must have the same rows');
+  }
+
+  const examples = x.rows;
+  const nbCoefficients = ((order + 2) * (order + 1)) / 2;
+
+  const x1 = x.getColumnVector(0);
+  const x2 = x.getColumnVector(1);
+
+  const scaleX1 = 1.0 / x1.clone().abs().max();
+  const scaleX2 = 1.0 / x2.clone().abs().max();
+  const scaleY = 1.0 / y.clone().abs().max();
+
+  x1.mulColumn(0, scaleX1);
+  x2.mulColumn(0, scaleX2);
+  y.mulColumn(0, scaleY);
+
+  const A = new Matrix(examples, nbCoefficients);
+  let col = 0;
+
+  for (let i = 0; i <= order; ++i) {
+    const limit = order - i;
+    for (let j = 0; j <= limit; ++j) {
+      const result = powColVector(x1, i).mulColumnVector(powColVector(x2, j));
+      A.setColumn(col, result);
+      col++;
+    }
+  }
+
+  const svd = new SVD(A.transpose(), {
+    computeLeftSingularVectors: true,
+    computeRightSingularVectors: true,
+    autoTranspose: false,
+  });
+
+  let qqs = Matrix.rowVector(svd.diagonal);
+  qqs = qqs.apply((i, j) => {
+    if (qqs.get(i, j) >= 1e-15) qqs.set(i, j, 1 / qqs.get(i, j));
+    else qqs.set(i, j, 0);
+  });
+
+  const qqs1 = Matrix.zeros(examples, nbCoefficients);
+  for (let i = 0; i < nbCoefficients; ++i) {
+    qqs1.set(i, i, qqs.get(0, i));
+  }
+
+  qqs = qqs1;
+
+  const U = svd.rightSingularVectors;
+  const V = svd.leftSingularVectors;
+
+  const coefficients = V.mmul(qqs.transpose()).mmul(U.transpose()).mmul(y);
+  for (let i = 0, col = 0; i <= nbCoefficients; ++i) {
+    const limit = order - i;
+    for (let j = 0; j <= limit; ++j) {
+      coefficients.set(
+        col,
+        0,
+        (coefficients.get(col, 0) * scaleX1 ** i * scaleX2 ** j) / scaleY,
+      );
+      col++;
+    }
+  }
+
+  return coefficients;
 }

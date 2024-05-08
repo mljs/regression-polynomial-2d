@@ -1,5 +1,5 @@
 {
-  "name": "ml-regression-polynomial-2d-2d",
+  "name": "ml-regression-polynomial-2d",
   "version": "0.0.0",
   "description": "Polynomial Regression 2D",
   "types": "./lib/index.d.ts",
@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "cheminfo-types": "^1.7.2",
+    "is-any-array": "^2.0.1",
     "ml-matrix": "^6.11.0",
     "ml-regression-base": "^3.0.0"
   }
