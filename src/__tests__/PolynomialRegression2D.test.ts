@@ -15,7 +15,7 @@ describe('2D polinomial fit', () => {
   const pf = new PolynomialRegression2D({ x, y }, z, {
     order: 2,
   });
-  console.log({ x, y });
+
   it('Training coefficients', () => {
     const estimatedCoefficients = [
       1.5587e1, 3.8873e-1, 5.2582e-3, 4.8498e-1, 2.1127e-3, -7.3709e-3,
