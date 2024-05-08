@@ -1,6 +1,6 @@
 {
   "name": "ml-regression-polynomial-2d",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Polynomial Regression 2D",
   "types": "./lib/index.d.ts",
   "main": "./lib/index.js",
