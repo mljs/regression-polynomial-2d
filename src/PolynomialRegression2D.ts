@@ -183,7 +183,11 @@ function train(input: DataXY, y: NumberArray | Matrix, order: number) {
 
   const examples = x.rows;
   const nbCoefficients = ((order + 2) * (order + 1)) / 2;
-
+  if (examples < nbCoefficients) {
+    throw new TypeError(
+      'Insufficient number of points to create regression model.',
+    );
+  }
   const x1 = x.getColumnVector(0);
   const x2 = x.getColumnVector(1);
 

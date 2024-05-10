@@ -87,3 +87,20 @@ describe('2D polinomial fit', () => {
     }
   });
 });
+it('Other function test', () => {
+  const len = 4;
+
+  const x = new Array(len);
+  let val = 5.0;
+  const y = new Array(len);
+  const z = new Array(len);
+  for (let i = 0; i < len; ++i, val += 0.5) {
+    x[i] = val;
+    y[i] = val;
+    z[i] = val * val + val * val;
+  }
+
+  expect(() => new PolynomialRegression2D({ x, y }, z, { order: 2 })).toThrow(
+    'Insufficient number of points to create regression model.',
+  );
+});
