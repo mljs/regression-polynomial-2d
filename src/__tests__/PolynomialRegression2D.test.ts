@@ -100,10 +100,7 @@ it('Other function test', () => {
     z[i] = val * val + val * val;
   }
 
-  expect(() => {
-    const polynomialRegression2D = new PolynomialRegression2D({ x, y }, z, {
-      order: 2,
-    });
-    return polynomialRegression2D;
-  }).toThrow('Insufficient number of points to create regression model.');
+  expect(() => new PolynomialRegression2D({ x, y }, z, { order: 2 })).toThrow(
+    'Insufficient number of points to create regression model.',
+  );
 });
