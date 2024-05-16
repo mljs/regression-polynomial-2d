@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { PolynomialRegression2D } from '../PolynomialRegression2D';
 
-describe('2D polinomial fit', () => {
+describe('2D polynomial fit', () => {
   const x = new Array(21);
   const y = new Array(21);
   const z = new Array(21);

@@ -2,7 +2,7 @@ import { DataXY, PointXY, type NumberArray } from 'cheminfo-types';
 import { Matrix, SVD } from 'ml-matrix';
 import { maybeToPrecision } from 'ml-regression-base';
 
-import BaseRegression2D, { checkArrayLength } from './BaseRegression2D';
+import { BaseRegression2D, checkArrayLength } from './BaseRegression2D';
 
 export interface PolynomialRegression2DOptions {
   /**

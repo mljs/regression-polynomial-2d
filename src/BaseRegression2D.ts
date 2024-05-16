@@ -1,7 +1,7 @@
 import { DataXY, PointXY, type NumberArray } from 'cheminfo-types';
 import { isAnyArray } from 'is-any-array';
 
-import checkArrayLength from './checkArrayLength';
+import { checkArrayLength } from './checkArrayLength';
 
 export interface RegressionScore {
   r: number;
@@ -9,7 +9,7 @@ export interface RegressionScore {
   chi2: number;
   rmsd: number;
 }
-export default class BaseRegression2D {
+export class BaseRegression2D {
   constructor() {
     if (new.target === BaseRegression2D) {
       throw new Error('BaseRegression must be subclassed');

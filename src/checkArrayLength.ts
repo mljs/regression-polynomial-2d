@@ -6,7 +6,9 @@ import { isAnyArray } from 'is-any-array';
  * @param y - second array
  * @throws if x or y are not the same length, or if they are not arrays
  */
-export default function checkArrayLength(input: DataXY, output: NumberArray) {
+export function checkArrayLength(input: DataXY, output: NumberArray) {
+  // TODO: This function should be removed and replace by
+  // https://github.com/mljs/spectra-processing/blob/main/src/xy/xyCheck.ts
   if (!isAnyArray(input.x) || !isAnyArray(input.y) || !isAnyArray(output)) {
     throw new TypeError('x, y and outputs must be arrays');
   }
