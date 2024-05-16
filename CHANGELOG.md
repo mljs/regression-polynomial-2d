@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/mljs/regression-polynomial-2d/compare/v0.2.0...v1.0.0) (2024-05-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove default export
+
+### Miscellaneous Chores
+
+* remove default export ([56372cd](https://github.com/mljs/regression-polynomial-2d/commit/56372cd0d1b452903b690e0bc3a32e937040bbbc))
+
 ## [0.2.0](https://github.com/mljs/regression-polynomial-2d/compare/v0.1.0...v0.2.0) (2024-05-10)
 
 
